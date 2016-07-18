@@ -2,7 +2,7 @@ from datetime import datetime,timedelta
 import humanize
 import sqlite3
 import sys
-
+import time
 
 conn = sqlite3.connect("issues.db")
 cu = conn.cursor()
@@ -26,8 +26,10 @@ def header():
    .hr { height: 3px; color: solid black; }
    </style>
    <h1>Issue dashboard</h1>
-   <div id='accordion' class='panel-group'>
    """)
+   print("<p>Generated on {0} UTC</p>".format(time.asctime(time.gmtime())))
+   print("<div id='accordion' class='panel-group'>")
+
 def footer():
     print('<script src="/sorttable.js"></script>')
     print("</div></div></body></html>")
@@ -70,7 +72,7 @@ def genSection(title, divid, query, colorize):
        </a>
       </h2>
      </div>
-     <div id="{divid}" class="panel-collapse collapse in">
+     <div id="{divid}" class="panel-collapse collapse">
       <div class="panel-body">
     """.format(**locals()))
     genTable(query, colorize)
@@ -94,26 +96,43 @@ def oldIsBad(meta):
 
 for row in cu.execute("select name from users where crl=1"):
     user = row[0]
-    print("Generating for %s..." % user, file=sys.stderr)
+    #print("Generating for %s..." % user, file=sys.stderr)
     sys.stdout = open('dashboard/' + user + '.html', 'w')
     header()
-    genSection("Open issues from external users without milestone nor assignment", "extIssues", """
+    genSection("Issues from external users without milestone nor assignment", "extIssues", """
      select issues.url, issues.number, issues.title, issues.created, reported.user, issues.assignee, issues.updated, issues.milestone
        from issues 
             join reported on reported.issue=issues.number 
             join users on reported.user=users.name and users.crl=0
       where not exists(select * from assigned where issue=issues.number) 
         and issues.milestone=""
-   order by issues.category,issues.number
-   """, newIsBad)
+   order by issues.category,issues.updated
+   """, oldIsBad)
 
-    genSection("Your open assigned issues", "yourIssues", """
+    genSection("Issues assigned to you", "yourIssues", """
      select issues.url, issues.number, issues.title, issues.created, reported.user, issues.assignee, issues.updated, issues.milestone
        from issues 
             join reported on reported.issue=issues.number 
             join assigned on assigned.issue=issues.number and assigned.user='{0}'
    order by issues.category,issues.updated
     """.format(user), oldIsBad)
+
+    genSection("Unassigned issues created by you", "unIssues", """
+     select issues.url, issues.number, issues.title, issues.created, reported.user, issues.assignee, issues.updated, issues.milestone
+       from issues 
+            join reported on reported.issue=issues.number and reported.user='{0}'
+      where not exists (select * from assigned where issue=issues.number)
+   order by issues.category,issues.updated
+    """.format(user), oldIsBad)
+
+    genSection("Assigned issues created by you, excluding issues assigned to you", "childIssues", """
+     select issues.url, issues.number, issues.title, issues.created, reported.user, issues.assignee, issues.updated, issues.milestone
+       from issues 
+            join reported on reported.issue=issues.number and reported.user='{0}'
+      where (select count(*) from assigned where issue=issues.number and user<>'{0}') > 0
+   order by issues.category,issues.updated
+    """.format(user), oldIsBad)
+
     footer()
     sys.stdout.close()
    
