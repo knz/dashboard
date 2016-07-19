@@ -8,11 +8,11 @@ conn = sqlite3.connect("issues.db")
 cu = conn.cursor()
 c = conn.cursor()
 
-def header():
+def header(user):
    print("""<!DOCTYPE html>
    <html lang=en>
    <head>
-   <title>CockroachDB Issue dashboard</title>
+   <title>CockroachDB Issue dashboard - %s</title>
    <meta charset="utf-8">
    <meta name="viewport" content="width=device-width, initial-scale=1">
    <!-- Latest compiled and minified CSS -->
@@ -25,8 +25,8 @@ def header():
    td { font-family: monospace !important; }
    .hr { height: 3px; color: solid black; }
    </style>
-   <h1>Issue dashboard</h1>
-   """)
+   <h1>Issue dashboard for %s</h1>
+   """ % (user,user))
    print("<p>Generated on {0} UTC</p>".format(time.asctime(time.gmtime())))
    print("<div id='accordion' class='panel-group'>")
 
@@ -96,7 +96,7 @@ def oldIsBad(meta):
 
 index = open('dashboard/index.html', 'w')
 sys.stdout = index
-header()
+header('all')
 print("<table class='table table-condensed table-striped table-hover table-responsive' style='width:auto'><thead>")
 print("<tr><th>Username</th><th>Dashboard link</th><th>Github profile</th></tr></thead><tbody>")
 
@@ -106,7 +106,7 @@ for row in cu.execute("select name, lower(name) as lname from users where crl=1 
     sys.stdout = index
     print("<tr><td>%s</td><td><a href='%s.html'>dashboard</a></td><td><a href='https://github.com/%s'>profile</a></td></tr>" % (luser, user, user))
     sys.stdout = open('dashboard/' + user + '.html', 'w')
-    header()
+    header(user)
     genSection("Issues from external users without milestone nor assignment", "extIssues", """
      select issues.url, issues.number, issues.title, issues.created, reported.user, issues.assignee, issues.updated, issues.milestone
        from issues 
