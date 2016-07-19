@@ -27,7 +27,6 @@ crl = set([
     "sploiselle",
     "tamird",
     "tschottdorf",
-    "ukd1",
     "vivekmenezes",
 ])
 

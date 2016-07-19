@@ -34,12 +34,26 @@ def footer():
     print('<script src="/sorttable.js"></script>')
     print("</div></div></body></html>")
 
-def genTable(query, colorize):
+def genSection(title, divid, query, colorize):
+   rows = list(enumerate(c.execute(query)))
+   nrows = len(rows)
+   print("""
+    <div class="panel panel-default">
+     <div class="panel-heading">
+      <h2 class="panel-title">
+       <a data-toggle="collapse" data-parent="#accordion" href="#{divid}">
+       <strong>{title} ({nrows} issues)</strong>
+       </a>
+      </h2>
+     </div>
+     <div id="{divid}" class="panel-collapse collapse">
+      <div class="panel-body">
+    """.format(**locals()))
    print("""
       <table class='sortable table table-condensed table-striped table-hover table-responsive'><thead>
-   <tr><th>Issue</th><th>Reporter</th><th>Assignee</th><th>Created</th><th>Updated</th><th>Milestone</th></tr>
+   <tr><th>#</th><th>Issue</th><th>Reporter</th><th>Assignee</th><th>Created</th><th>Updated</th><th>Milestone</th></tr>
    </thead><tbody>""")
-   for row in c.execute(query):
+   for i,row in rows:
        created = datetime.strptime(row[3],'%Y-%m-%dT%H:%M:%SZ')
        hcreated = humanize.naturaltime(created)
        url = row[0].strip()
@@ -52,31 +66,17 @@ def genTable(query, colorize):
        milestone = row[7]
        status = colorize(locals())
        print("""<tr class='{status}'>
+       <td>{i}</td>
        <td><a href="{url}">{number} - {title}</a></td>
        <td><a href="https://github.com/{reporter}">{reporter}</a></td>
        <td><a href="https://github.com/{assignee}">{assignee}</a></td>
-       <td>{hcreated}</td>
-       <td>{hupdated}</td>
+       <td><span class='hidden'>{created}</span>{hcreated}</td>
+       <td><span class='hidden'>{updated}</span>{hupdated}</td>
        <td>{milestone}</td>
    </tr>""".format(**locals()))
    
    print("""</tbody></table>""")
-
-def genSection(title, divid, query, colorize):
-    print("""
-    <div class="panel panel-default">
-     <div class="panel-heading">
-      <h2 class="panel-title">
-       <a data-toggle="collapse" data-parent="#accordion" href="#{divid}">
-       <strong>{title}</strong>
-       </a>
-      </h2>
-     </div>
-     <div id="{divid}" class="panel-collapse collapse">
-      <div class="panel-body">
-    """.format(**locals()))
-    genTable(query, colorize)
-    print("""
+   print("""
       </div>
      </div>
     </div>
@@ -94,9 +94,17 @@ def oldIsBad(meta):
         return 'warning'
     return ''
 
-for row in cu.execute("select name from users where crl=1"):
+index = open('dashboard/index.html', 'w')
+sys.stdout = index
+header()
+print("<table class='table table-condensed table-striped table-hover table-responsive' style='width:auto'><thead>")
+print("<tr><th>Username</th><th>Dashboard link</th><th>Github profile</th></tr></thead><tbody>")
+
+for row in cu.execute("select name, lower(name) as lname from users where crl=1 order by lname"):
     user = row[0]
-    #print("Generating for %s..." % user, file=sys.stderr)
+    luser = row[1]
+    sys.stdout = index
+    print("<tr><td>%s</td><td><a href='%s.html'>dashboard</a></td><td><a href='https://github.com/%s'>profile</a></td></tr>" % (luser, user, user))
     sys.stdout = open('dashboard/' + user + '.html', 'w')
     header()
     genSection("Issues from external users without milestone nor assignment", "extIssues", """
@@ -117,7 +125,7 @@ for row in cu.execute("select name from users where crl=1"):
    order by issues.category,issues.updated
     """.format(user), oldIsBad)
 
-    genSection("Unassigned issues created by you", "unIssues", """
+    genSection("Issues created by you that nobody is working on", "unIssues", """
      select issues.url, issues.number, issues.title, issues.created, reported.user, issues.assignee, issues.updated, issues.milestone
        from issues 
             join reported on reported.issue=issues.number and reported.user='{0}'
@@ -125,7 +133,7 @@ for row in cu.execute("select name from users where crl=1"):
    order by issues.category,issues.updated
     """.format(user), oldIsBad)
 
-    genSection("Assigned issues created by you, excluding issues assigned to you", "childIssues", """
+    genSection("Issues you created that someone else is working on", "childIssues", """
      select issues.url, issues.number, issues.title, issues.created, reported.user, issues.assignee, issues.updated, issues.milestone
        from issues 
             join reported on reported.issue=issues.number and reported.user='{0}'
@@ -135,4 +143,8 @@ for row in cu.execute("select name from users where crl=1"):
 
     footer()
     sys.stdout.close()
-   
+
+sys.stdout = index
+print("</tbody></table>")
+footer()
+index.close()
