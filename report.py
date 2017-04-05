@@ -101,7 +101,7 @@ def oldIsBad(meta):
     return ''
 
 ops = {
-   "extIssues" : {
+   "a_extIssuesIncoming" : {
       'title':  "Issues from external users without milestone nor assignment",
       'query':  """
      select issues.url, issues.number, issues.title, issues.created, reported.user, issues.assignee, issues.updated, issues.milestone
@@ -112,7 +112,36 @@ ops = {
         and issues.milestone=""
    order by issues.category,issues.updated
       """},
-   "yourIssues":{
+   "b_extIssuesUnassigned" : {
+      'title':  "Issues from external users without assignment",
+      'query':  """
+     select issues.url, issues.number, issues.title, issues.created, reported.user, issues.assignee, issues.updated, issues.milestone
+       from issues 
+            join reported on reported.issue=issues.number 
+            join users on reported.user=users.name and users.crl=0
+      where not exists(select * from assigned where issue=issues.number) 
+   order by issues.category,issues.updated
+      """},
+   "h_extIssues" : {
+      'title':  "Issues from external users (all)",
+      'query':  """
+     select issues.url, issues.number, issues.title, issues.created, reported.user, issues.assignee, issues.updated, issues.milestone
+       from issues 
+            join reported on reported.issue=issues.number 
+            join users on reported.user=users.name and users.crl=0
+   order by issues.category,issues.updated
+      """},
+   "c_yourExtIssues" : {
+      'title':  "Issues from external users assigned to you",
+      'query':  """
+     select issues.url, issues.number, issues.title, issues.created, reported.user, issues.assignee, issues.updated, issues.milestone
+       from issues 
+            join reported on reported.issue=issues.number 
+            join users on reported.user=users.name and users.crl=0
+            join assigned on assigned.issue=issues.number and assigned.user='{0}'
+   order by issues.category,issues.updated
+      """},
+   "d_yourIssues":{
       'title': "Issues assigned to you",
       'query': """
      select issues.url, issues.number, issues.title, issues.created, reported.user, issues.assignee, issues.updated, issues.milestone
@@ -121,7 +150,7 @@ ops = {
             join assigned on assigned.issue=issues.number and assigned.user='{0}'
    order by issues.category,issues.updated
       """},
-   "unIssues":{
+   "e_unIssues":{
       'title':"Issues created by you that nobody is working on",
       'query': """
      select issues.url, issues.number, issues.title, issues.created, reported.user, issues.assignee, issues.updated, issues.milestone
@@ -130,7 +159,17 @@ ops = {
       where not exists (select * from assigned where issue=issues.number)
    order by issues.category,issues.updated
       """},
-   "childIssues":{
+   "f_yourIssuesWithoutMilestone":{
+      'title':"Issues created by you without a milestone",
+      'query': """
+     select issues.url, issues.number, issues.title, issues.created, reported.user, issues.assignee, issues.updated, issues.milestone
+       from issues 
+            join reported on reported.issue=issues.number and reported.user='{0}'
+      where not exists (select * from assigned where issue=issues.number)
+        and issues.milestone=""
+   order by issues.category,issues.updated
+      """},
+   "g_childIssues":{
       'title': "Issues you created that someone else is working on",
       'query': """
      select issues.url, issues.number, issues.title, issues.created, reported.user, issues.assignee, issues.updated, issues.milestone
