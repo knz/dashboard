@@ -22,6 +22,7 @@ crl = set([
     "jordanlewis",
     "jseldess",
     "jess-edwards",
+    "justinj",
     "kkaneda",
     "knz",
     "kuanluo",
