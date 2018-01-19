@@ -1,5 +1,7 @@
 #! /bin/sh
-cd ~/src/dashboard
+ISSUE=${1:-issue}
 mkdir -p dashboard
-../issue/issue -json ""|python3 json2sql.py|sqlite3 issues.db
+$ISSUE -json "" >data.json
+python3 json2sql.py <data.json |sqlite3 issues.db
 python3 report.py
+cp sorttable.js dashboard/

@@ -36,7 +36,7 @@ def header(user):
    print("<div id='accordion' class='panel-group'>")
 
 def footer():
-    print('<script src="/sorttable.js"></script>')
+    print('<script src="sorttable.js"></script>')
     print("</div></div></body></html>")
 
 def genSection(title, divid, query, colorize):
